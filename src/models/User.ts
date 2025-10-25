@@ -1,6 +1,7 @@
 export type User = {
   id: string;
-  userName: string;
+  username: string;
   email: string;
   selectedAvatar: number;
+  role: string;
 };

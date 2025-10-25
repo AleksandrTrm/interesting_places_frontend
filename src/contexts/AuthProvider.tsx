@@ -30,10 +30,12 @@ export const AuthProvider = ({ children }: Props) => {
 
         const userData: User = {
           id: res.data!.id,
-          userName: res.data!.userName,
+          username: res.data!.username,
           email: res.data!.email,
           selectedAvatar: res.data!.selectedAvatar,
+          role: res.data!.role,
         };
+
         setUser(userData);
       } catch (err) {
         console.error("Restore session failed:", err);
@@ -60,9 +62,10 @@ export const AuthProvider = ({ children }: Props) => {
 
             const userData: User = {
               id: res.data!.id,
-              userName: res.data!.userName,
-              email: res.data!.email,
+              username: res.data!.username,
+              email: res.data.email,
               selectedAvatar: res.data.selectedAvatar,
+              role: res.data.role,
             };
             setUser(userData);
 
@@ -99,7 +102,7 @@ export const AuthProvider = ({ children }: Props) => {
     };
   }, [accessToken]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<string> => {
     try {
       setIsLoading(true);
       const response = await AccountService.login(email, password);
@@ -109,11 +112,14 @@ export const AuthProvider = ({ children }: Props) => {
 
       const userData: User = {
         id: response.data!.id,
-        userName: response.data!.userName,
+        username: response.data!.username,
         email: response.data!.email,
         selectedAvatar: response.data!.selectedAvatar,
+        role: response.data!.role,
       };
       setUser(userData);
+
+      return response.data!.role;
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -136,6 +142,7 @@ export const AuthProvider = ({ children }: Props) => {
     logout,
     isLoading,
     isAuthenticated,
+    getUserRole: () => user?.role || null,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

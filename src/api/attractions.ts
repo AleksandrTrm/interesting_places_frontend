@@ -1,3 +1,4 @@
+// src/api/attractions.ts
 import { api } from "./api";
 import type { AxiosResponse } from "axios";
 
@@ -10,5 +11,13 @@ export class AttractionsService {
       page: page,
       elementsOnPage: elementsOnPage,
     });
+  }
+
+  static async createAttraction(attractionData: {
+    title: string;
+    description: string;
+    dateOfBorn: string;
+  }): Promise<AxiosResponse> {
+    return api.post(`attractions/new`, attractionData);
   }
 }

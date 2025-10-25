@@ -14,11 +14,15 @@ export class PersonsService {
       queryWord: queryWord,
     });
   }
-}
 
-const imagePaths = [
-  "/public/images/gallery/people.webp",
-  "/public/images/gallery/teathre.webp",
-  "/public/images/gallery/nature.jpg",
-  "/public/images/gallery/city.webp",
-];
+  static async createPerson(personData: {
+    name: string;
+    surname: string;
+    patronymic: string;
+    dateOfBirth: string;
+    typeOfActivity: string;
+    shortInfo: string;
+  }): Promise<AxiosResponse> {
+    return api.post(`persons/new`, personData);
+  }
+}

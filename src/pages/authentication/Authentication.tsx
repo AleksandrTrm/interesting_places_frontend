@@ -22,7 +22,7 @@ export function Authentication() {
   const [isLoginView, setIsLoginView] = useState(true);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { login: contextLogin } = useAuth();
+  const { login: contextLogin, accessToken } = useAuth();
 
   const {
     register: registerLogin,
@@ -49,7 +49,8 @@ export function Authentication() {
   const onLoginSubmit = async (data: LoginFields) => {
     setGeneralError(null);
     try {
-      await contextLogin(data.email, data.password);
+      const userRole = await contextLogin(data.email, data.password);
+
       navigate("/");
     } catch (err: any) {
       console.error("Login error:", err);

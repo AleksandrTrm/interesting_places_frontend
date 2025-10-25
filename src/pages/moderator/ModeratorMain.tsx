@@ -1,49 +1,50 @@
-// src/pages/attractions/AttractionsPage.tsx
+// src/pages/moderator/PlacesApprovement.tsx
 import { useState, useEffect } from "react";
-import { AttractionsService } from "../api/attractions";
-import type { Attraction } from "../models/Attraction";
+import { PlacesService } from "../../api/places"; // Убедитесь, что в сервисе есть метод getPendingPlaces
+import type { Place } from "../../models/Place";
+import { toast } from "react-toastify"; // Импортируем toast для уведомлений
 
-const ELEMENTS_PER_PAGE = 9; // Количество элементов на странице
+const ELEMENTS_PER_PAGE = 9;
 
-export function Attractions() {
-  const [attractions, setAttractions] = useState<Attraction[]>([]); // Указываем правильный тип
+export function ModeratorMain() {
+  const [places, setPlaces] = useState<Place[]>([]); // Используем тип Place
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(0); // Страницы начинаются с 0
+  const [currentPage, setCurrentPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(0);
   const [totalElements, setTotalElements] = useState<number>(0);
+  const [isActionLoading, setIsActionLoading] = useState<{
+    [key: string]: boolean;
+  }>({}); // Для отслеживания загрузки на уровне карточки
 
-  const fetchData = async (page: number) => {
+  const fetchPendingPlaces = async (page: number) => {
     setLoading(true);
     setError(null);
     try {
-      // Предполагается, что AttractionsService.getAttractions принимает страницу и кол-во элементов
-      const response = await AttractionsService.getAttractions(
+      const response = await PlacesService.getPendingPlaces(
         page,
         ELEMENTS_PER_PAGE
       );
       const responseData = response.data;
 
-      console.log(responseData);
-
-      setAttractions(responseData.values); // Используем .values как в Places
-      setTotalElements(responseData.totalCount);
+      setPlaces(responseData.values || []);
+      setTotalElements(responseData.totalCount || 0);
 
       const calculatedTotalPages = Math.ceil(
         responseData.totalCount / ELEMENTS_PER_PAGE
       );
       setTotalPages(calculatedTotalPages);
     } catch (err) {
-      console.error("Ошибка при загрузке достопримечательностей:", err);
-      setError("Не удалось загрузить список достопримечательностей.");
-      setAttractions([]);
+      console.error("Ошибка при загрузке мест на одобрение:", err);
+      setError("Не удалось загрузить список мест на одобрение.");
+      setPlaces([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData(currentPage);
+    fetchPendingPlaces(currentPage);
   }, [currentPage]);
 
   const handlePageChange = (newPage: number) => {
@@ -64,11 +65,58 @@ export function Attractions() {
     }
   };
 
+  const handleApprove = async (placeId: string) => {
+    setIsActionLoading((prev) => ({ ...prev, [placeId]: true }));
+    try {
+      await PlacesService.approvePlace(placeId);
+      toast.success("Место одобрено!");
+      fetchPendingPlaces(currentPage);
+    } catch (err: any) {
+      console.error("Ошибка при одобрении места:", err);
+      let errorMessage = "Не удалось одобрить место.";
+      if (
+        err.response &&
+        err.response.data &&
+        typeof err.response.data === "string"
+      ) {
+        errorMessage = err.response.data;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      toast.error(errorMessage);
+    } finally {
+      setIsActionLoading((prev) => ({ ...prev, [placeId]: false }));
+    }
+  };
+
+  const handleDelete = async (placeId: string) => {
+    // Используем placeId
+    setIsActionLoading((prev) => ({ ...prev, [placeId]: true }));
+    try {
+      await PlacesService.deletePlace(placeId);
+      toast.success("Место удалено!");
+      fetchPendingPlaces(currentPage);
+    } catch (err: any) {
+      console.error("Ошибка при удалении места:", err);
+      let errorMessage = "Не удалось удалить место.";
+      if (
+        err.response &&
+        err.response.data &&
+        typeof err.response.data === "string"
+      ) {
+        errorMessage = err.response.data;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      toast.error(errorMessage);
+    } finally {
+      setIsActionLoading((prev) => ({ ...prev, [placeId]: false }));
+    }
+  };
+
   return (
     <div className="container mt-5 mb-5">
-      <h1 className="title is-1 has-text-centered mb-6">
-        Достопримечательности Челябинска
-      </h1>
+      <h1 className="title is-1 has-text-centered mb-6">Места на одобрение</h1>
 
       {loading && (
         <div className="has-text-centered">
@@ -88,10 +136,10 @@ export function Attractions() {
       {!loading && !error && (
         <>
           <div className="columns is-multiline is-variable is-8">
-            {attractions && attractions.length > 0 ? (
-              attractions.map((attraction) => (
+            {places && places.length > 0 ? (
+              places.map((place) => (
                 <div
-                  key={`${attraction.title}-${attraction.dateOfBorn}`} // Уникальный ключ
+                  key={place.id || place.title} // Используем уникальный ID если есть
                   className="column is-one-third-desktop is-half-tablet is-full-mobile"
                 >
                   <div
@@ -106,11 +154,11 @@ export function Attractions() {
                       <figure className="image is-4by3">
                         <img
                           src={
-                            attraction.photoLink == ""
-                              ? "error"
-                              : attraction.photoLink
+                            place.photoLink && place.photoLink.trim() !== ""
+                              ? place.photoLink
+                              : "/public/images/image.png" // Или используйте вашу логику с onError
                           }
-                          alt={attraction.title}
+                          alt={place.title}
                           onError={(e) => {
                             const imgElement = e.target as HTMLImageElement;
                             const DEFAULT_IMAGE_PATH =
@@ -118,21 +166,21 @@ export function Attractions() {
 
                             if (imgElement.src.includes(DEFAULT_IMAGE_PATH)) {
                               console.warn(
-                                `Изображение по умолчанию '${DEFAULT_IMAGE_PATH}' также не найдено.`
+                                `Изображение по умолчанию '${DEFAULT_IMAGE_PATH}' не может быть загружено.`
                               );
+                              imgElement.style.border = "1px dashed red";
+                              imgElement.alt = "Изображение недоступно";
                               return;
                             }
-
                             console.warn(
-                              `Изображение для '${attraction.title}' не загрузилось. Заменено на изображение по умолчанию.`
+                              `Неожиданная ошибка загрузки изображения для '${place.title}'. Повторная попытка с дефолтным изображением.`
                             );
                             imgElement.src = DEFAULT_IMAGE_PATH;
-
                             imgElement.style.height = "128px";
                             imgElement.style.width = "128px";
+                            imgElement.style.objectFit = "contain";
                             imgElement.style.alignSelf = "center";
                             imgElement.style.justifySelf = "center";
-                            imgElement.src = DEFAULT_IMAGE_PATH;
                           }}
                         />
                       </figure>
@@ -145,17 +193,34 @@ export function Attractions() {
                         flexDirection: "column",
                       }}
                     >
-                      <h2 className="title is-4">{attraction.title}</h2>
+                      <h2 className="title is-4">{place.title}</h2>
                       <div className="content" style={{ flexGrow: 1 }}>
-                        {/* Отображаем дату, предполагая, что это год или дата */}
                         <p>
-                          <strong>Год основания/появления:</strong>{" "}
-                          {new Date(attraction.dateOfBorn).getFullYear()}
+                          <strong>Автор:</strong>{" "}
+                          {place.author?.username || "Неизвестный автор"}
                         </p>
-                        <p>
-                          {attraction.description || "Описание отсутствует"}
-                        </p>
-                        {/* Добавьте другие поля достопримечательности, если нужно */}
+                        <p>{place.description || "Описание отсутствует"}</p>
+                      </div>
+                      {/* Кнопки одобрить/удалить */}
+                      <div className="card-footer">
+                        <button
+                          className={`card-footer-item button is-success ${
+                            isActionLoading[place.id] ? "is-loading" : ""
+                          }`}
+                          onClick={() => handleApprove(place.id)}
+                          disabled={isActionLoading[place.id]}
+                        >
+                          Одобрить
+                        </button>
+                        <button
+                          className={`card-footer-item button is-danger ${
+                            isActionLoading[place.id] ? "is-loading" : ""
+                          }`}
+                          onClick={() => handleDelete(place.id)}
+                          disabled={isActionLoading[place.id]}
+                        >
+                          Удалить
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -163,9 +228,7 @@ export function Attractions() {
               ))
             ) : (
               <div className="column is-full">
-                <p className="has-text-centered">
-                  Достопримечательности не найдены.
-                </p>
+                <p className="has-text-centered">Нет мест на одобрение.</p>
               </div>
             )}
           </div>
@@ -195,10 +258,10 @@ export function Attractions() {
                 {Array.from({ length: totalPages }, (_, i) => i)
                   .filter(
                     (pageNumber) =>
-                      pageNumber === 0 || // Первая страница
-                      pageNumber === totalPages - 1 || // Последняя страница
+                      pageNumber === 0 ||
+                      pageNumber === totalPages - 1 ||
                       (pageNumber >= currentPage - 1 &&
-                        pageNumber <= currentPage + 1) // Страницы вокруг текущей
+                        pageNumber <= currentPage + 1)
                   )
                   .map((pageNumber, index, filteredPages) => {
                     const showEllipsisBefore =

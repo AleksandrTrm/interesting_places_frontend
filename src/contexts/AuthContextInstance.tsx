@@ -5,8 +5,9 @@ export type AuthContextType = {
   accessToken: string | undefined;
   refreshToken: string | undefined;
   user: User | undefined;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<string>;
   logout: () => void;
+  getUserRole: () => string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 };

@@ -34,7 +34,7 @@ const AVATAR_OPTIONS: AvatarOption[] = [
 ];
 
 export function Header() {
-  const { user, logout } = useAuth();
+  const { user, logout, getUserRole } = useAuth();
   const [localSelectedAvatarId, setLocalSelectedAvatarId] = useState<number>(0);
   const [currentAvatarIndex, setCurrentAvatarIndex] = useState(0);
   const [isSyncedWithUser, setIsSyncedWithUser] = useState(false);
@@ -164,6 +164,14 @@ export function Header() {
           <Link to="/attractions" className="navbar-item navbar-item-colored">
             Достопримечательности
           </Link>
+          <Link to="/places/my" className="navbar-item navbar-item-colored">
+            Мои места
+          </Link>
+          {(getUserRole() === "Admin" || getUserRole() === "Moderator") && (
+            <Link to="/moderator" className="navbar-item navbar-item-colored">
+              Модерация новых мест
+            </Link>
+          )}
         </div>
 
         <div className="navbar-end">
@@ -171,7 +179,7 @@ export function Header() {
             <div className="buttons">
               {user && (
                 <span style={{ fontSize: "20px" }}>
-                  {user.userName || user.email}
+                  {user.username || user.email}
                 </span>
               )}
               {user && selectedAvatar && (

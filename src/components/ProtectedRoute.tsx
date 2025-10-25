@@ -1,22 +1,32 @@
 // src/components/ProtectedRoute.tsx
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/useAuth";
-import type { ReactNode } from "react";
 
-type ProtectedRouteProps = {
-  children: ReactNode;
-};
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  allowedRoles?: string[]; // Массив разрешённых ролей
+}
 
-export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading } = useAuth();
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  allowedRoles,
+}) => {
+  const { isAuthenticated, getUserRole, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div>Загрузка...</div>;
+    return;
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/authentication" replace />;
   }
 
-  return children;
+  if (allowedRoles && allowedRoles.length > 0) {
+    const userRole = getUserRole();
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      return <Navigate to="/" replace />;
+    }
+  }
+
+  return <>{children}</>;
 };
